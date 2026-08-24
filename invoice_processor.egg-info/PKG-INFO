@@ -1,0 +1,242 @@
+Metadata-Version: 2.4
+Name: invoice-processor
+Version: 0.1.0
+Summary: Enterprise invoice processing system: PDF/image -> LLM structured extraction -> validation -> PostgreSQL
+Author: Engineering
+License: MIT
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi<1,>=0.115
+Requires-Dist: uvicorn[standard]>=0.32
+Requires-Dist: python-multipart>=0.0.17
+Requires-Dist: pydantic[email]<3,>=2.9
+Requires-Dist: pydantic-settings>=2.6
+Requires-Dist: sqlalchemy>=2.0.36
+Requires-Dist: psycopg[binary]>=3.2
+Requires-Dist: alembic>=1.14
+Requires-Dist: celery[redis]>=5.4
+Requires-Dist: redis>=5.2
+Requires-Dist: httpx>=0.27
+Requires-Dist: pymupdf>=1.24.10
+Requires-Dist: pytesseract>=0.3.13
+Requires-Dist: pillow>=10.4
+Requires-Dist: streamlit>=1.38
+Provides-Extra: dev
+Requires-Dist: pytest>=8.3; extra == "dev"
+Requires-Dist: pytest-cov>=5.0; extra == "dev"
+Requires-Dist: ruff>=0.7; extra == "dev"
+Requires-Dist: mypy>=1.13; extra == "dev"
+
+# Invoice Processing System
+
+Procesamiento asíncrono de facturas (PDF/imagen) con arquitectura hexagonal:
+**OCR → LLM estructurado → validación de negocio → PostgreSQL**, servido por una
+API FastAPI, workers Celery e interfaz Streamlit.
+
+## Arranque rápido
+
+```bash
+make up                # postgres + redis + api + worker + streamlit (migran al arrancar)
+```
+
+> En `ENVIRONMENT=development` (por defecto) la configuración se toma de
+> `.env.example` — no necesitas crear ningún archivo. Con
+> `ENVIRONMENT=production` se lee `.env`: créalo a partir del ejemplo y pon
+> tus valores reales (`cp .env.example .env`).
+
+| Servicio | URL |
+|---|---|
+| API REST | http://localhost:8000 (docs interactivos en `/docs`) |
+| UI Streamlit | http://localhost:8501 |
+| Health | http://localhost:8000/health |
+
+## Arranque con Podman
+
+El proyecto no depende de Docker en el código: los servicios son contenedores
+OCI y funcionan igual con **Podman**, incluido el modo *rootless* (sin daemon,
+sin contenedores como root). Los puertos usados (8000, 8501, 5432, 6379) son
+no privilegiados, así que no requiere ajustes extra.
+
+### 1. Instalar
+
+| Distribución | Comando |
+|---|---|
+| Fedora / RHEL / CentOS | `sudo dnf install podman podman-compose` |
+| Debian / Ubuntu | `sudo apt install podman podman-compose` |
+| Arch / Manjaro | `sudo pacman -S podman podman-compose` |
+| macOS / Windows | Podman Desktop → https://podman-desktop.io |
+
+> Con Podman ≥ 4.7 no es imprescindible `podman-compose`: el subcomando
+> integrado `podman compose` delega automáticamente en `podman-compose` o en
+> `docker-compose` si alguno está instalado.
+
+### 2. Levantar el stack
+
+```bash
+cp .env.example .env                                   # solo para producción
+
+podman compose -f docker-compose.yml up --build -d     # equivalente a `make up`
+```
+
+Con la herramienta externa en su lugar (`podman-compose`), los mismos comandos
+van sin la palabra intermedia:
+
+```bash
+podman-compose -f docker-compose.yml up -d --build
+```
+
+### 3. Operación diaria (equivalencias)
+
+| Acción | Docker (`make`) | Podman |
+|---|---|---|
+| Estado y salud | `make ps` | `podman compose ps` |
+| Logs en vivo api+worker | `make logs` | `podman compose logs -f api worker` |
+| Migraciones sueltas | `make migrate` | `podman compose exec api alembic upgrade head` |
+| Escalar workers | `docker compose up -d --scale worker=4` | `podman compose up -d --scale worker=4` |
+| Reiniciar todos | `docker compose restart` | `podman compose restart` |
+| Parar | `make down` | `podman compose down` |
+| Parar borrando datos | `docker compose down -v` | `podman compose down -v` |
+
+#### Reiniciar los servicios
+
+```bash
+# Reinicio rápido (mantiene contenedores; NO aplica cambios de código/imagen):
+docker compose restart                # con Podman: podman compose restart
+
+# Recrear aplicando cambios recientes (código nuevo, docker-compose.yml o .env):
+docker compose up -d --build          # reconstruye imágenes y recreatea lo cambiado
+#   equivalente completo: make down && make up
+
+# Reiniciar un solo servicio (p. ej. tras tocar solo la UI):
+docker compose up -d --build streamlit
+```
+
+> `restart` no reconstruye ni relee variables del `.env`: si cambiaste código o
+> configuración usa la variante con `up -d --build`.
+
+### 4. Usar los targets del Makefile sin tocarlos (opcional)
+
+Los targets `up/down/logs/ps/migrate` invocan `docker compose`. Si quieres
+seguir usándolos con Podman, crea un wrapper `docker` en tu `PATH`:
+
+```bash
+mkdir -p ~/.local/bin && printf '#!/bin/sh\nexec podman "$@"\n' > ~/.local/bin/docker
+chmod +x ~/.local/bin/docker        # asegúrate de que ~/.local/bin está en PATH
+make up                             # ahora ejecuta Podman por debajo
+```
+
+### 5. Notas específicas de Podman
+
+- **Volúmenes nombrados** (`pgdata`, `redisdata`, `uploads`): funcionan tal cual;
+  al ser volúmenes gestionados (no bind mounts) no requieren sufijo `:z/:Z`
+  de SELinux.
+- **Healthchecks y `depends_on: condition:`**: el compose define esperas por
+  salud de postgres/redis. Usa un `podman-compose` reciente (≥ 1.0.6) o
+  `docker compose` vía el provider integrado; versiones antiguas ignoraban esas
+  condiciones y arrancaban api/worker antes de tiempo.
+- **Migraciones al arrancar**: api y worker ejecutan `alembic upgrade head` en
+  su entrypoint (`docker-entrypoint.sh`) antes de levantar el proceso; no hay
+  servicio one-shot, lo que evita bugs de grafos de dependencia en
+  podman-compose 1.0.x con Podman 4.x. Si la BD tarda, la política `restart`
+  reintenta hasta lograrlo.
+- **Ver contenedores con herramientas nativas**: `podman ps`, `podman logs -f
+  invoice-processor-worker-1`, `podman inspect …`.
+- **systemd (opcional)**: genera servicios de usuario para arranque automático:
+  `podman-compose systemd-service` o Quadlet (Podman ≥ 4.4) — útil si quieres
+  el stack levantado al iniciar sesión.
+
+### 6. Solución de problemas comunes
+
+| Error | Causa | Solución |
+|---|---|---|
+| `failed to connect to the docker API at unix:///run/user/…/podman/podman.sock` al usar `podman compose` | `podman compose` delegó en `docker-compose`, que habla con la API de Docker por socket; en rootless ese socket lo crea `podman.socket` y no está activo | **A)** `systemctl --user enable --now podman.socket` y reintenta (si persiste: `export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock`) · **B)** usa el proveedor nativo: `podman-compose -f docker-compose.yml up -d --build`, o fuerza `PODMAN_COMPOSE_PROVIDER="$(command -v podman-compose)" podman compose …` |
+| `Error: no container with name or ID "proyecto_servicio_1" found` (exit 125) | Contenedor nunca creado o **herramientas mezcladas**: `podman-compose` nombra con guiones bajos (`svc_1`) y `docker-compose`/compose-v2 con guiones (`svc-1`) — cada una busca nombres que la otra no creó | Elige UNA herramienta y sé consistente. Limpia el estado residual: `podman-compose down; podman rm -f $(podman ps -aq --filter name=<proyecto>)` y vuelve a subir con ella. Si solo falla un servicio, lanza en primer plano (`up --build` sin `-d`) para ver el error real (puerto ocupado, fallo de build) |
+| `Cannot connect to Podman Desktop…` / `podman machine` no encontrado | macOS/Windows sin máquina iniciada | `podman machine init && podman machine start` |
+| api/worker tardan en estar "healthy" justo tras `up` | El entrypoint aplica migraciones antes de arrancar el servicio | Espera los healthchecks (`podman compose ps`); si fallan de forma persistente revisa `podman logs invoice-processor_api_1` |
+| `port is already allocated` en 8000/8501/5432/6379 | Otro servicio local (o una ejecución previa) ocupa el puerto | `ss -ltnp | grep -E ':(8000|8501|5432|6379)\b'` para identificarlo; ciérralo o cambia el mapeo en `docker-compose.yml` |
+| `short-name "postgres:16-alpine" did not resolve to an alias and no unqualified-search registries are defined` (exit 125, nada sube y luego fallan los `--requires`) | Podman no sabe de qué registro tirar las imágenes con nombre corto | El compose ya usa nombres completos (`docker.io/library/postgres:16-alpine`) — actualiza el repo. Alternativa global: añade `unqualified-search-registries = ["docker.io"]` en `/etc/containers/registries.conf` (sección `[registries.search]` en formatos antiguos) |
+| Tras correr los tests de integración, la API responde `relation "documents" does not exist` | El *teardown* de los tests de integración hace `drop_all()` del esquema para dejar la BD limpia | Vuelve a aplicar las migraciones: `make migrate` (o `docker compose exec api alembic upgrade head`) |
+| Worker arranca con `Unable to load celery application … was not found` | Comando de Celery con módulo incorrecto | El módulo correcto es `celery -A app.infrastructure.celery_app.app:celery_app worker` (así está en `docker-compose.yml`) |
+| Worker procesa pero falla `storage_error: Document not found in storage` | API y worker apuntan a directorios distintos: `STORAGE_PATH` debe coincidir y el volumen debe montarse en esa misma ruta en ambos servicios (`/app/data/uploads`) | Revisa `STORAGE_PATH` y los `volumes:` de api y worker en `docker-compose.yml` |
+| api/worker se reinician en bucle con errores de migración al inicio | Postgres aún no aceptaba conexiones cuando corrió `alembic upgrade head` (el entrypoint migra antes de arrancar) | Transitorio: la política `restart` lo reintenta y arranca en cuanto la BD está lista. Verifica con `podman logs invoice-processor_api_1` |
+
+## Subir una factura
+
+```bash
+curl -F "file=@mi-factura.pdf" http://localhost:8000/api/v1/invoices/upload
+# -> 202 {"document_id": "...", "job_id": "...", "poll_url": "/api/v1/jobs/<id>"}
+
+curl http://localhost:8000/api/v1/jobs/<job_id>     # estado del pipeline
+curl "http://localhost:8000/api/v1/invoices?search=Acme"
+curl http://localhost:8000/api/v1/dashboard/stats
+```
+
+Formatos aceptados: `.pdf .png .jpg .jpeg`, máx. 10 MB (`MAX_FILE_SIZE_MB`).
+Extracción (`LLM_PROVIDER`): `hybrid` **(default)** — reglas primero
+(offline) y, si no hallan patrón, escala a **Qwen3-VL** con el texto OCR +
+las páginas renderizadas del documento; `rules` solo reglas;
+`qwen-vl`/`openai` siempre modelo de visión/chat vía API
+OpenAI-compatible (`LLM_API_KEY` de DashScope o `LLM_BASE_URL` de un vLLM
+local); `mock` sintético para demos/tests. Sin credenciales de visión,
+`hybrid` funciona igual que `rules`. El JSON del modelo se valida con
+Pydantic (`ExtractedInvoiceData`) antes de tocar el dominio, y las reglas
+de negocio deciden entre persistir o marcar en revisión.
+
+## Desarrollo
+
+```bash
+make test-unit         # suite offline completa
+make lint && make fmt
+make logs              # api + worker en vivo
+make down              # parar el stack
+```
+
+## Pruebas
+
+La suite offline no necesita Docker ni red (fakes en memoria). Para correrla
+necesitas un entorno Python con las dependencias:
+
+```bash
+# crear entorno e instalar (una vez)
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+
+make test-unit                       # o: pytest -m unit
+ruff check app tests                 # linter (limpio en todo el proyecto)
+```
+
+Suites que requieren infraestructura (se saltan solas si falta la variable):
+
+```bash
+# Integración contra PostgreSQL real (usa el compose levantado):
+TEST_DATABASE_URL=postgresql+psycopg://invoice:invoice@localhost:5432/invoices \
+  pytest -m integration
+
+# E2E contra el stack completo desplegado:
+RUN_LIVE_E2E=1 pytest -m e2e          # sube un PDF real y hace polling del job
+
+make test                             # todo lo disponible según tu entorno
+```
+
+> Guía paso a paso para probar con facturas reales (subir archivos, generar
+> PDFs de prueba, casos de error): [`docs/manual_usuario_pruebas.md`](docs/manual_usuario_pruebas.md)
+
+## Trazabilidad de errores
+
+Cada línea de log de api, worker y streamlit incluye su origen exacto
+(`module`, `file`, `function`, `line`) y las excepciones añaden tipo, módulo
+Python, punto donde se lanzaron y traceback completo. Las no capturadas
+(hilos incluidos) quedan registradas como `CRITICAL` automáticamente.
+
+```bash
+docker compose logs api | jq 'select(.level=="ERROR")'   # con Podman: podman-compose logs api | jq ...
+```
+
+Más recetas en `docs/manual_usuario_pruebas.md` §7.
+
+## Documentación
+
+- `docs/manual_tecnico.md` — arquitectura y módulos
+- `docs/manual_usuario_pruebas.md` — guía de pruebas con archivos reales
+- `docs/archivo_estudio.md` · `docs/exploracion_archivos.md`
+- `docs/arquitectura.drawio` — diagrama (ábreló en app.diagrams.net)

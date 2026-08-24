@@ -1,0 +1,153 @@
+name: invoice-processor
+
+x-app-environment: &app-environment
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+  #ENVIRONMENT: ${ENVIRONMENT:-production }
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  LOG_FORMAT: ${LOG_FORMAT:-json}
+  DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-invoice}:${POSTGRES_PASSWORD:-invoice}@postgres:5432/${POSTGRES_DB:-invoices}
+  REDIS_URL: redis://redis:6379/0
+  STORAGE_PATH: /app/data/uploads
+  MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-10}
+  LLM_PROVIDER: ${LLM_PROVIDER:-hybrid}
+  LLM_API_KEY: ${LLM_API_KEY:-}
+  LLM_MODEL: ${LLM_MODEL:-gemini-3.5-flash-lite}
+  LLM_EXECUTION: ${LLM_EXECUTION:-api}
+  LLM_BASE_URL: ${LLM_BASE_URL:-}
+  VISION_MAX_PAGES: ${VISION_MAX_PAGES:-4}
+  LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
+  LLM_MAX_ATTEMPTS: ${LLM_MAX_ATTEMPTS:-3}
+  LOCAL_OCR_ENGINE: ${LOCAL_OCR_ENGINE:-vl}
+  LOCAL_OCR_LANG: ${LOCAL_OCR_LANG:-es}
+  OCR_PROVIDER: ${OCR_PROVIDER:-local}
+  CELERY_TASK_TIMEOUT_SECONDS: ${CELERY_TASK_TIMEOUT_SECONDS:-600}
+  CELERY_MAX_RETRIES: ${CELERY_MAX_RETRIES:-3}
+  CELERY_RETRY_BACKOFF_SECONDS: ${CELERY_RETRY_BACKOFF_SECONDS:-30}
+
+services:
+  postgres:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-invoice}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-invoice}
+      POSTGRES_DB: ${POSTGRES_DB:-invoices}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - invoice-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: docker.io/library/redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - invoice-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # api/worker apply schema migrations on startup (docker-entrypoint.sh),
+  # so no one-shot `migrate` service is needed — this also keeps the
+  # dependency graph compatible with podman-compose and old podman versions.
+  api:
+    build: .
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+    command: >
+      uvicorn app.presentation.api.main:app
+      --host 0.0.0.0 --port 8000 --proxy-headers
+    environment:
+      <<: *app-environment
+      PORT: "8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads:/app/data/uploads
+    networks:
+      - invoice-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "/app/scripts/healthcheck.py"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  worker:
+    build: .
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+    command: >
+      celery -A app.infrastructure.celery_app.app:celery_app worker
+      --loglevel=INFO --concurrency=${CELERY_CONCURRENCY:-2}
+      --queues=invoices --hostname=worker@%h --max-tasks-per-child=50
+    environment: *app-environment
+    volumes:
+      - uploads:/app/data/uploads
+      - paddle_models:/home/appuser/.paddlex
+    networks:
+      - invoice-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.infrastructure.celery_app.app:celery_app", "inspect", "ping", "--timeout", "5"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 30s
+    # Scale horizontally with:
+    #   docker compose up -d --scale worker=4
+
+  streamlit:
+    build: .
+    command: >
+      streamlit run app/presentation/streamlit/app.py
+      --server.port 8501 --server.address 0.0.0.0 --server.headless true
+      --browser.gatherUsageStats false
+    environment:
+      <<: *app-environment
+      PORT: "8501"
+      API_BASE_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    networks:
+      - invoice-net
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "/app/scripts/healthcheck.py"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+networks:
+  invoice-net:
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:
+  paddle_models:
