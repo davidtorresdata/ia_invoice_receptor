@@ -265,9 +265,14 @@ Implementaciones concretas de todos los puertos + composición + mensajería.
 - **Por qué**: el interruptor api/local vive en UNA función; el resto del sistema solo ve `InvoiceExtractor`.
 
 #### `rules_extractor.py`
-- `RulesExtractor.extract(pages_images, text_lines, document_type) -> ExtractedInvoice` — extracción determinista por regex sobre las líneas de OCR: número (patrones FE/NC/NIT), fechas, bloque monetario (SUBTOTAL/IVA/TOTAL con normalización de miles), proveedor (NIT + razón social), ítems tabulares.
+- `RulesInvoiceExtractor.extract(document_text, document_type) -> ExtractedInvoice` — extracción determinista por regex sobre el texto **canonizado** por `normalize_invoice_text()` (mayúsculas sin acentos: los patrones no usan `re.I` ni alternancias de tildes).
+- **Número**: lista ordenada de patrones con nombre en el reporte (`referencia_de_pago`, `factura_electronica_venta_no`, `numero_prefijo_guion_linea` "FV - 137", `numero_solo_prefijo_no` "No. 11052"); un guard `_AUTH_CONTEXT_PATTERN` descarta candidatos dentro de frases de autorización/resolución DIAN (numeración de 14 dígitos).
+- **Fechas**: emisión y vencimiento por etiqueta (valor en la misma línea o en la siguiente) y formatos dd/mm/aaaa, ISO `aaaa-mm-dd` y dd-mmm-aaaa.
+- **Bloque monetario**: subtotal/IVA/total como trío coherente con normalización de miles; patrones priorizados (`total_a_pagar` → … → `total_simple`).
+- **Proveedor**, en orden de prioridad: etiqueta `EMISOR:` → línea con sufijo societario (S.A.S/LTDA…, prefiriendo el segmento tras guion "Marca - Marca S.A.S.") → proximidad a NIT (nombre en la misma línea o en la anterior a un NIT desnudo). Los NIT de la plataforma de facturación (Alegra/Facturatech) se excluyen vía `_PLATFORM_LINE_PATTERN`; si no hay NIT impreso se genera placeholder determinista `SIN-NIT-{slug}` para deduplicar.
+- Ítems tabulares (cantidad/descripción/cant./precios) vía `_ITEM_ROW_PATTERN`.
 - Si faltan campos requeridos lanza `PartialExtractionError(partial_data=..., missing_fields=...)` llevándose lo encontrado.
-- **Por qué**: gratis, rápido, auditable y suficiente para facturas electrónicas bien formadas; los parciales alimentan la fusión.
+- **Por qué**: gratis, rápido, auditable y suficiente para facturas electrónicas bien formadas (7/7 del corpus real se resuelven solo con reglas); los parciales alimentan la fusión.
 
 #### `openai_extractor.py`
 - `OpenAICompatibleExtractor(api_key, base_url, model, ...)`: cliente OpenAI-compatible (chat completions multimodal) con páginas renderizadas como imágenes base64; instrucción estricta de JSON; parse defensivo a `ExtractedInvoice`; errores → `LLMExtractionError`.
@@ -291,8 +296,8 @@ Implementaciones concretas de todos los puertos + composición + mensajería.
 - **Por qué**: los extractores de visión necesitan raster; un punto único controla cuántas páginas se procesan.
 
 #### `text_normalizer.py`
-- Helpers de limpieza OCR: colapso de espacios/ligaduras, normalización de importes y fechas para las regex de reglas.
-- **Por qué**: la calidad del OCR varía; normalizar ANTES de las regex multiplica la tasa de acierto.
+- `normalize_invoice_text(raw)`: forma canónica única para las reglas — NFKD sin marcas combinatorias (sin tildes, `Ñ→N`), limpieza tipográfica (NBSP, comillas, guiones, elipsis), **mayúsculas**, colapso de espacios por línea preservando la estructura de líneas (etiqueta sola + valor debajo) y colapso de letras repetidas por ruido de escáner protegiendo los dígrafos legítimos LL/RR/SS/CC y nunca los dígitos.
+- **Por qué**: la calidad del OCR varía; canonizar ANTES de las regex multiplica la tasa de acierto y permite patrones deterministas sin defensas de caso/acentos.
 
 ### 4.6 Paquete `ocr/`
 #### `engines.py`

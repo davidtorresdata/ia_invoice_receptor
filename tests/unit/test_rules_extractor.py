@@ -168,3 +168,97 @@ class TestMoneyParsing:
     )
     def test_formats(self, raw, expected):
         assert str(_to_decimal(raw)) == expected
+
+
+BUCE0_TEXT = """Elaborado en Soluciones Alegra S.A.S NIT 900.559.088-2 / www.alegra.com
+Moneda: COP
+LINA RICO MULLER
+NIT 1020723830-3
+Tel: +574227362
+www.atlantidabucea.com
+Fecha y hora de expedición: 2025-05-16T14:51:15
+Subtotal
+$3.180.000
+No. 11052
+Total
+$3.180.000
+"""
+
+PARAPENTE_TEXT = """PLATAFORMA: Facturatech Nit. 901.143.311-8
+GLORIA YADIRA BELTRAN GUTIERREZ
+NIT: 37900991-0
+Autorización factura electrónica de venta No. 18764092313021 válida desde 2025-04-24
+FACTURA ELECTRÓNICA DE VENTA :
+FV - 137
+FECHA FIRMADO:
+26/06/2025 12:31:24
+MONEDA:
+COP Colombia, Pesos
+Subtotal:
+$1.656.000,00
+Total:
+$1.656.000,00
+"""
+
+TRADUCTORES_TEXT = """Cliente: Cristian David Torres Amado
+Moneda: COP
+Traductores.co
+Traductores.co -  Traductores.co S.A.S. - NIT 900755117-8
+Software: Alegra  -  NIT 900.559.088-2
+Proveedor tecnológico: Soluciones Alegra S.A.S
+FACTURA ELECTRÓNICA DE VENTA
+ FE364
+Fecha de creación: 15/06/2026
+Subtotal
+$136.135
+Iva (19.00%)
+$25.866
+Total
+$162.000
+"""
+
+ATRAPALO_TEXT = """ATRAPALO COLOMBIA S.A.S.
+NIT. 900413476-1
+Autorización facturación electrónica No. 18764112289708
+Habilta del FE2638431 al: FE3000000 del: 2026-07-08 al 2027-07-08.
+Página 1 de 1
+Factura Electrónica De Venta FE2675608
+Fecha de Factura:
+2026-08-23
+TOTAL
+92.166
+CUFE: e8f8e93ca65563aa6dbf7801a778b52d702d95515a4f75101d98a1dc2942bf0eb1c4b049c72c00567debff31156f45e2
+Fecha de Generación: 2026-08-23
+"""
+
+
+class TestRealWorldLayouts:
+    def test_alegra_receipt_bare_number_and_name_above_nit(self, extractor):
+        data = extractor.extract(BUCE0_TEXT)
+        assert data.number == "11052"
+        assert data.supplier.name == "LINA RICO MULLER"
+        assert data.supplier.tax_id == "1020723830-3"
+        assert data.issue_date.isoformat() == "2025-05-16"
+        assert str(data.total) == "3180000.00"
+
+    def test_platform_nit_is_never_the_supplier(self, extractor):
+        data = extractor.extract(PARAPENTE_TEXT)
+        assert data.supplier.name == "GLORIA YADIRA BELTRAN GUTIERREZ"
+        assert data.supplier.tax_id == "37900991-0"
+        assert data.supplier.tax_id != "9011433118"
+
+    def test_authorization_number_is_not_the_invoice_number(self, extractor):
+        assert extractor.extract(PARAPENTE_TEXT).number == "FV-137"
+        atrapalo = extractor.extract(ATRAPALO_TEXT)
+        assert atrapalo.number == "FE2675608"
+        assert atrapalo.number != "18764112289708"
+
+    def test_same_line_brand_dash_nit_with_trailing_dot(self, extractor):
+        data = extractor.extract(TRADUCTORES_TEXT)
+        assert data.supplier.name == "TRADUCTORES.CO S.A.S"
+        assert data.supplier.tax_id == "900755117-8"
+        assert data.issue_date.isoformat() == "2026-06-15"
+
+    def test_issue_date_on_line_after_label_and_iso_inline(self, extractor):
+        data = extractor.extract(ATRAPALO_TEXT)
+        assert data.issue_date.isoformat() == "2026-08-23"

@@ -45,9 +45,9 @@ logger = logging.getLogger(__name__)
 _TWO_PLACES = Decimal("0.01")
 
 _MONTHS = {
-    "jan": 1, "ene": 1, "feb": 2, "mar": 3, "apr": 4, "abr": 4,
-    "may": 5, "jun": 6, "jul": 7, "aug": 8, "ago": 8, "sep": 9, "set": 9,
-    "oct": 10, "nov": 11, "dec": 12, "dic": 12,
+    "JAN": 1, "ENE": 1, "FEB": 2, "MAR": 3, "APR": 4, "ABR": 4,
+    "MAY": 5, "JUN": 6, "JUL": 7, "AUG": 8, "AGO": 8, "SEP": 9, "SET": 9,
+    "OCT": 10, "NOV": 11, "DEC": 12, "DIC": 12,
 }
 
 # Human-readable field labels used both in the user-facing error message
@@ -69,46 +69,78 @@ _REQUIRED_FIELDS = ("number", "supplier", "issue_date", "total")
 _NO_MATCH = "no_encontrado"
 
 # Ordered by specificity; first match wins. Names surface in the report.
+# NOTE: every pattern below works on the CANONICAL text produced by
+# normalize_invoice_text() — uppercase, accent-free — so no re.I flag and
+# no accent alternations are needed (they would be dead branches).
 _NUMBER_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("referencia_de_pago", re.compile(r"REFERENCIA\s+DE\s+PAGO\s*:?\s*\n?\s*(\d{5,25})", re.I)),
+    ("referencia_de_pago", re.compile(r"REFERENCIA\s+DE\s+PAGO\s*:?\s*\n?\s*(\d{5,25})")),
     ("factura_electronica_venta_no", re.compile(
-        r"Factura\s+Electr[oó]nica\s+(?:de\s+)?Venta\s*[:\n]*\s*"
-        r"(?:No\.?|N[°º])?\s*\.?\s*([A-Z]{0,6}-?\d{2,}[\w-]*)",
-        re.I,
+        r"FACTURA\s+ELECTRONICA\s+(?:DE\s+)?VENTA\s*[:\n]*\s*"
+        r"(?:NO\.?|N[°º])?\s*\.?\s*([A-Z]{0,6}-?\d{2,}[\w-]*)",
     )),
     ("generico_factura_no", re.compile(
-        r"(?:FACTURA|INVOICE)\b[^\n]{0,80}?No\.?\s*[:.]?\s*([A-Z]{0,6}-?\d{3,})", re.I)),
+        r"(?:FACTURA|INVOICE)\b[^\n]{0,80}?NO\.?\s*[:.]?\s*([A-Z]{0,6}-?\d{3,})")),
+    # Prefixed code on its own line ("FV - 137"): common Facturatech style.
+    ("numero_prefijo_guion_linea", re.compile(
+        r"^\s*([A-Z]{1,5})\s*-\s*(\d{3,10})\s*$", re.M)),
+    # Bare "No. 11052" alone on a line (Alegra POS receipts). Capped at 10
+    # digits so DIAN authorization numbers (exactly 14, starting 1876...)
+    # can never be mistaken for an invoice number.
+    ("numero_solo_prefijo_no", re.compile(r"^\s*NO\.?\s*[:.]?\s*(\d{3,10})\s*$", re.M)),
+)
+
+# Matches ending right before a candidate number when that candidate sits in
+# an authorization/resolution sentence (DIAN numeración), which must never be
+# taken as the invoice number.
+_AUTH_CONTEXT_PATTERN = re.compile(
+    r"\b(?:AUTORIZACI\w*|RESOLUCI\w*|NUMERACI\w*|HABILITA)\b[^:\n]{0,40}$",
 )
 
 _TAX_ID_PATTERN_NAME = "nit_generico"
 _TAX_ID_PATTERN = re.compile(
-    r"N\.?I\.?T\.?\s*(?:del\s+Emisor\s*)?[:.\-\s]*([\d]{1,12}(?:[.\-][\d]{1,6}){0,3}(?:-[\d]{1,2})?)",
-    re.I,
+    r"N\.?I\.?T\.?\s*(?:DEL\s+EMISOR\s*)?[:.\-\s]*([\d]{1,12}(?:[.\-][\d]{1,6}){0,3}(?:-[\d]{1,2})?)",
 )
 
 _EMITOR_PATTERN_NAME = "etiqueta_emisor"
-_EMITOR_PATTERN = re.compile(r"Emisor\s*:\s*([^\n]{2,120})", re.I)
+_EMITOR_PATTERN = re.compile(r"EMISOR\s*:\s*([^\n]{2,120})")
 _COMPANY_LINE_PATTERN_NAME = "primera_linea_empresa"
+# Trailing "." tolerated: "… S.A.S." (with final dot) is as common as "S.A.S".
 _COMPANY_LINE_PATTERN = re.compile(
-    r"^([A-ZÁÉÍÓÚÑ][\w.,&\- ]{1,80}?(?:S\.?\s?A\.?(?:\s?S\.?)?|LTDA\.?|LTD\.?|INC\.?|SAS))\s*$",
-    re.I | re.M,
+    r"^([A-Z][\w.,&\- ]{1,80}?(?:S\.?\s?A\.?(?:\s?S\.?)?|LTDA\.?|LTD\.?|INC\.?|SAS))\.?,?\s*$",
+    re.M,
+)
+# Lines whose NIT belongs to the e-invoice PLATFORM (not the supplier):
+# billing-platform footers would otherwise win the "first NIT in text" race.
+_PLATFORM_LINE_PATTERN = re.compile(
+    r"PLATAFORMA\s*:|ELABORAD[OA]S?\s+EN|GENERAD[OA]S?\s+(?:EN|POR)|"
+    r"PROVEEDOR\s+TECNOLOGICO|SOFTWARE\s*:|POWERED\s+BY",
+)
+_NIT_IN_LINE_PATTERN_NAME = "nit_con_nombre_cercano"
+_NIT_IN_LINE_PATTERN = re.compile(
+    r"^(.*?)\bN\.?I\.?T\.?\s*(?:DEL\s+EMISOR\s*)?[:.\-\s]*"
+    r"([\d]{1,12}(?:[.\-][\d]{1,6}){0,3}(?:-[\d]{1,2})?)\s*$",
 )
 
 _DATE_DDMMYYYY = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})")
-_DATE_DDMMMYYYY = re.compile(r"\b(\d{1,2})-([A-Za-z]{3,4})-(\d{4})")
+_DATE_ISO_YYYYMMDD = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})(?!\d)")
+_DATE_DDMMMYYYY = re.compile(r"\b(\d{1,2})-([A-Z]{3,4})-(\d{4})")
 
 # Each entry: (pattern_name, label regex fragment with accent tolerance).
 # From every fragment we build two matchers: inline ("Label: value")
 # and standalone (label alone on its line, value on a following line).
 _ISSUE_DATE_LABELS = (
-    ("fecha_de_emision", r"Fechas?\s+de\s+[Ee]misi[óo]n"),
-    ("fecha_de_expedicion", r"FECHA\s+DE\s+EXPEDICI[OÓ]N"),
-    ("fecha_de_validacion", r"Fechas?\s+de\s+Validaci[óo]n"),
-    ("periodo_de_facturacion", r"PER[ÍI]ODO\s+DE\s+FACTURACI[OÓ]N"),
+    ("fecha_de_emision", r"FECHAS?\s+DE\s+EMISION"),
+    ("fecha_de_expedicion", r"FECHA\s+DE\s+EXPEDICION"),
+    ("fecha_de_validacion", r"FECHAS?\s+DE\s+VALIDACION"),
+    ("periodo_de_facturacion", r"PERIODO\s+DE\s+FACTURACION"),
+    # Atrapalo/FACTURE-style headers print the label alone and the ISO date
+    # on the following line.
+    ("fecha_de_factura", r"FECHAS?\s+DE\s+FACTURA"),
+    ("fecha_de_generacion", r"FECHAS?\s+DE\s+GENERACION"),
 )
 _DUE_DATE_LABELS = (
-    ("fecha_limite_de_pago", r"FECHA\s+L[ÍI]MITE\s+DE\s+PAGO"),
-    ("fecha_de_vencimiento", r"Fechas?\s+de\s+Vencimiento"),
+    ("fecha_limite_de_pago", r"FECHA\s+LIMITE\s+DE\s+PAGO"),
+    ("fecha_de_vencimiento", r"FECHAS?\s+DE\s+VENCIMIENTO"),
     ("fecha_de_pago", r"FECHA\s+DE\s+PAGO"),
 )
 
@@ -119,8 +151,8 @@ def _build_date_matchers(
     return [
         (
             name,
-            re.compile(rf"^\s*{frag}\s*:\s*([^\n]+)$", re.I | re.M),
-            re.compile(rf"^\s*{frag}\s*:?\s*$", re.I),
+            re.compile(rf"^\s*{frag}\s*:\s*([^\n]+)$", re.M),
+            re.compile(rf"^\s*{frag}\s*:?\s*$", re.M),
         )
         for name, frag in labels
     ]
@@ -138,29 +170,28 @@ _ALL_DATE_LABEL_MATCHERS = tuple(
 
 _MONEY = r"(?:COP|USD|EUR|\$)?\s*-?\s*([\d][\d.,]*)"
 _TOTAL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("total_a_pagar", re.compile(rf"Total(?:es)?\s+a\s+[Pp]agar\s*:?\s*{_MONEY}", re.I)),
-    ("total_venta", re.compile(rf"Total\s+Venta\s*:?\s*{_MONEY}", re.I)),
-    ("total_valor", re.compile(rf"^\s*TOTAL\s+VALOR\s*:?\s*{_MONEY}", re.I | re.M)),
-    ("total_mayusculas", re.compile(rf"TOTAL\s+A\s+PAGAR\s*:?\s*{_MONEY}")),
+    ("total_a_pagar", re.compile(rf"TOTAL(?:ES)?\s+A\s+PAGAR\s*:?\s*{_MONEY}")),
+    ("total_venta", re.compile(rf"TOTAL\s+VENTA\s*:?\s*{_MONEY}")),
+    ("total_valor", re.compile(rf"^\s*TOTAL\s+VALOR\s*:?\s*{_MONEY}", re.M)),
     # Lowest priority: bare "Total $X" (PaddleOCR-VL markdown style).
-    ("total_simple", re.compile(rf"(?<!\w)Total\s*:?\s*{_MONEY}", re.I)),
+    ("total_simple", re.compile(rf"(?<!\w)TOTAL\s*:?\s*{_MONEY}")),
 )
 _SUBTOTAL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("subtotal", re.compile(rf"Subtotal\s*:?\s*{_MONEY}", re.I)),
+    ("subtotal", re.compile(rf"SUBTOTAL\s*:?\s*{_MONEY}")),
 )
 _TAX_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("monto_iva", re.compile(rf"Monto\s+IVA\s*:?\s*{_MONEY}", re.I)),
-    ("impuestos_iva_inline", re.compile(rf"Impuestos\s+IVA\s*:?\s*{_MONEY}", re.I)),
+    ("monto_iva", re.compile(rf"MONTO\s+IVA\s*:?\s*{_MONEY}")),
+    ("impuestos_iva_inline", re.compile(rf"IMPUESTOS\s+IVA\s*:?\s*{_MONEY}")),
     # "(19.00%)" style annotations are skipped so the percent digits are
     # never mistaken for the amount; a bare "IVA 19%" with no amount is
     # rejected by the negative lookahead.
     ("iva_etiqueta", re.compile(
-        rf"\bIVA\b\s*(?:\([^)]*\))?\s*:?\s*(?![\d.,]+\s*%){_MONEY}", re.I,
+        rf"\bIVA\b\s*(?:\([^)]*\))?\s*:?\s*(?![\d.,]+\s*%){_MONEY}",
     )),
 )
 
 _ITEM_ROW_PATTERN = re.compile(
-    r"^\s*\d{1,4}\s*\n([A-ZÁÉÍÓÚÑ][^\n]{2,90})\n(\d+\.\d{1,3})\n([\d.,]+)\n([\d.,]+)\n([\d.,]+)\s*$",
+    r"^\s*\d{1,4}\s*\n([A-Z][^\n]{2,90})\n(\d+\.\d{1,3})\n([\d.,]+)\n([\d.,]+)\n([\d.,]+)\s*$",
     re.M,
 )
 
@@ -321,16 +352,26 @@ class RulesInvoiceExtractor(InvoiceExtractor):
     @classmethod
     def _find_number(cls, text: str, report: dict[str, dict[str, str]]) -> str | None:
         for name, pattern in _NUMBER_PATTERNS:
-            match = pattern.search(text)
-            if match:
+            for match in pattern.finditer(text):
+                if cls._in_authorization_context(text, match.start()):
+                    continue
+                value = "-".join(g for g in match.groups() if g) \
+                    if name == "numero_prefijo_guion_linea" else match.group(1)
                 cls._record(report, "number", name)
-                return match.group(1).strip().strip(":").upper()
+                return value.strip().strip(":").upper()
         cls._record(report, "number", None)
         return None
+
+    @staticmethod
+    def _in_authorization_context(text: str, position: int) -> bool:
+        """True when the candidate number follows DIAN authorization wording."""
+        window = text[max(0, position - 60):position]
+        return bool(_AUTH_CONTEXT_PATTERN.search(window))
 
     @classmethod
     def _find_supplier(cls, text: str, report: dict[str, dict[str, str]]) -> ExtractedSupplier | None:
         name: str | None = None
+
         emitor_match = _EMITOR_PATTERN.search(text)
         if emitor_match:
             name = emitor_match.group(1).strip()
@@ -338,27 +379,93 @@ class RulesInvoiceExtractor(InvoiceExtractor):
         else:
             for line in text.splitlines()[:20]:
                 # Drop an inline "- Nit. ..." suffix before matching.
-                cleaned = re.sub(r"\s*-\s*N\.?I\.?T\.?\.?\s*[\d.\-]+\s*$", "", line.strip(), flags=re.I)
-                company = _COMPANY_LINE_PATTERN.match(cleaned)
+                cleaned = re.sub(r"\s*-\s*N\.?I\.?T\.?\.?\s*[\d.\-]+\s*$", "", line.strip())
+                # Duplicated brand segments ("X.co - X.co S.A.S."): prefer
+                # the dash-separated segment carrying a company suffix.
+                segments = [seg.strip(" .,-") for seg in cleaned.split("-")] if "-" in cleaned else []
+                suffixed = next((s for s in segments if _COMPANY_LINE_PATTERN.match(s)), None)
+                company = _COMPANY_LINE_PATTERN.match(suffixed or cleaned)
                 if company:
                     name = company.group(1).strip().rstrip(",")
                     cls._record(report, "supplier", _COMPANY_LINE_PATTERN_NAME)
                     break
+
+        nit_line_tax_id: str | None = None
+        if not name:
+            # Last resort: anchor on a NIT line (skipping e-invoice PLATFORM
+            # footers like Alegra/Facturatech) and take the name from the
+            # same line's prefix or from the nearest meaningful line above.
+            lines = text.splitlines()
+            for index, line in enumerate(lines):
+                if _PLATFORM_LINE_PATTERN.search(line):
+                    continue
+                nit_match = _NIT_IN_LINE_PATTERN.match(line.strip())
+                if not nit_match:
+                    continue
+                candidate = cls._name_from_nit_prefix(nit_match.group(1))
+                if candidate is None:
+                    candidate = cls._name_above_nit(lines, index)
+                if candidate is None:
+                    continue
+                name = candidate
+                nit_line_tax_id = nit_match.group(2)
+                cls._record(report, "supplier", _NIT_IN_LINE_PATTERN_NAME)
+                break
+
         if not name:
             cls._record(report, "supplier", None)
             return None
 
-        tax_id_match = _TAX_ID_PATTERN.search(text)
-        if tax_id_match:
+        tax_id_match = _TAX_ID_PATTERN.search(
+            "\n".join(
+                line for line in text.splitlines() if not _PLATFORM_LINE_PATTERN.search(line)
+            )
+        )
+        if nit_line_tax_id:
+            cls._record(report, "supplier_tax_id", _TAX_ID_PATTERN_NAME)
+            tax_id = nit_line_tax_id
+        elif tax_id_match:
             cls._record(report, "supplier_tax_id", _TAX_ID_PATTERN_NAME)
             tax_id = tax_id_match.group(1)
         else:
             cls._record(report, "supplier_tax_id", None)
             # Valid placeholder (>=6 chars) and deterministic per entity name,
             # so supplier dedup stays consistent when no NIT is printed.
-            slug = re.sub(r"[^A-Z0-9]", "", name.upper())[:6] or "UNKNOWN"
+            slug = re.sub(r"[^A-Z0-9]", "", name)[:6] or "UNKNOWN"
             tax_id = f"SIN-NIT-{slug}"
         return ExtractedSupplier(name=name, tax_id=tax_id)
+
+    @staticmethod
+    def _name_from_nit_prefix(prefix: str) -> str | None:
+        """Supplier name printed on the SAME line, left of the NIT."""
+        cleaned = prefix.strip().strip("-:., ").strip()
+        if len(cleaned) < 3:
+            return None
+        if "-" in cleaned:
+            segments = [seg.strip() for seg in cleaned.split("-") if seg.strip()]
+            suffixed = next((s for s in segments if _COMPANY_LINE_PATTERN.match(s)), None)
+            if suffixed:
+                return suffixed.rstrip(",")
+        return cleaned.rstrip(",") or None
+
+    @staticmethod
+    def _name_above_nit(lines: list[str], nit_index: int) -> str | None:
+        """Nearest plausible entity name ABOVE a bare `NIT ...` line."""
+        for candidate in reversed(lines[max(0, nit_index - 5):nit_index]):
+            stripped = candidate.strip()
+            if not stripped or len(stripped) < 4 or len(stripped) > 90:
+                continue
+            if _PLATFORM_LINE_PATTERN.search(stripped):
+                continue
+            if _NIT_IN_LINE_PATTERN.match(stripped):
+                continue
+            lowered = stripped
+            if any(lowered.startswith(w) for w in ("TEL", "CEL", "EMAIL", "WWW.", "HTTP", "DIR")):
+                continue
+            if re.fullmatch(r"[\d\s.,:/-]+", stripped):
+                continue
+            return stripped.rstrip(",;- ")
+        return None
 
     @staticmethod
     def _parse_date(raw: str) -> date | None:
@@ -370,10 +477,17 @@ class RulesInvoiceExtractor(InvoiceExtractor):
                 return date(year, month, day)
             except ValueError:
                 return None
+        iso = _DATE_ISO_YYYYMMDD.search(raw)
+        if iso:
+            year, month, day = (int(part) for part in iso.groups())
+            try:
+                return date(year, month, day)
+            except ValueError:
+                return None
         ddmonyyyy = _DATE_DDMMMYYYY.search(raw)
         if ddmonyyyy:
             day, mon, year = ddmonyyyy.groups()
-            month = _MONTHS.get(mon.lower()[:3])
+            month = _MONTHS.get(mon[:3])
             if month:
                 try:
                     return date(int(year), month, int(day))
