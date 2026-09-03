@@ -1,0 +1,362 @@
+<mxfile host="app.diagrams.net" agent="invoice-processor-docs" version="24.7.8">
+  <diagram id="pagina-hexagonal" name="1 · Patron hexagonal">
+    <mxGraphModel dx="1420" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="p1_0" />
+        <mxCell id="p1_1" parent="p1_0" />
+
+        <!-- ======================= TITULOS ======================= -->
+        <mxCell id="p1_title" value="Invoice Processing System — Patron hexagonal (puertos y adaptadores)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" vertex="1" parent="p1_1">
+          <mxGeometry x="40" y="16" width="1420" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_rule" value="REGLA DE ORO: todas las flechas de dependencia apuntan HACIA el dominio — el dominio no importa frameworks, ni BD, ni HTTP, ni Celery." style="text;html=1;strokeColor=#b85450;fillColor=#fce8e6;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;fontColor=#ae4132;" vertex="1" parent="p1_1">
+          <mxGeometry x="40" y="54" width="1420" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- ======================= PRESENTACION ======================= -->
+        <mxCell id="p1_pres" value="PRESENTACION  (drivers)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;spacingTop=6;fontSize=14;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;arcSize=6;" vertex="1" parent="p1_1">
+          <mxGeometry x="40" y="100" width="270" height="620" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_fastapi" value="&lt;b&gt;FastAPI :8000&lt;/b&gt;&lt;br&gt;routers · deps · schemas · mappers&lt;br&gt;middleware: SecurityHeaders → RateLimit → CORS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="p1_pres">
+          <mxGeometry x="16" y="42" width="238" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_streamlit" value="&lt;b&gt;Streamlit :8501&lt;/b&gt;&lt;br&gt;subir · listar · detalle · dashboard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="p1_pres">
+          <mxGeometry x="16" y="136" width="238" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_presnote" value="Solo conversa con CASOS DE USO&lt;br&gt;(inyeccion via deps.py)&lt;br&gt;cero logica de negocio aqui" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#82b366;fontSize=11;fontColor=#4d4d4d;" vertex="1" parent="p1_pres">
+          <mxGeometry x="16" y="212" width="238" height="66" as="geometry" />
+        </mxCell>
+
+        <!-- ======================= APLICACION ======================= -->
+        <mxCell id="p1_app" value="APLICACION  (orquestacion)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;spacingTop=6;fontSize=14;fontStyle=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=6;" vertex="1" parent="p1_1">
+          <mxGeometry x="350" y="100" width="290" height="620" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_ucs" value="&lt;b&gt;CASOS DE USO&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;UploadInvoice (subir + encolar)&lt;br&gt;ProcessInvoice (pipeline worker)&lt;br&gt;GetInvoice · ListInvoices&lt;br&gt;GetJobStatus · DashboardStats" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="p1_app">
+          <mxGeometry x="16" y="42" width="258" height="128" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_aports" value="&lt;b&gt;Puertos de aplicacion&lt;/b&gt;&lt;br&gt;TaskDispatcher (mandar a cola)&lt;br&gt;UnitOfWork (transaccion)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="p1_app">
+          <mxGeometry x="16" y="186" width="258" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_appnote" value="Recibe puertos INYECTADOS:&lt;br&gt;mismo codigo con Postgres real&lt;br&gt;o con fakes de test" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#d6b656;fontSize=11;fontColor=#4d4d4d;" vertex="1" parent="p1_app">
+          <mxGeometry x="16" y="278" width="258" height="66" as="geometry" />
+        </mxCell>
+
+        <!-- ======================= DOMINIO ======================= -->
+        <mxCell id="p1_domain" value="DOMINIO  (nucleo estable — cero dependencias tecnicas)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;spacingTop=6;fontSize=14;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;arcSize=6;" vertex="1" parent="p1_1">
+          <mxGeometry x="680" y="100" width="330" height="620" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_entities" value="&lt;b&gt;Entidades (invariantes en __post_init__)&lt;/b&gt;&lt;br&gt;Invoice + Items + Supplier&lt;br&gt;Document · ProcessingJob (maquina de estados)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="p1_domain">
+          <mxGeometry x="16" y="42" width="298" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_vos" value="&lt;b&gt;Value Objects&lt;/b&gt;&lt;br&gt;Money (Decimal 2dec HALF_UP)&lt;br&gt;FileType (magic bytes) · Enums&lt;br&gt;ExtractedInvoiceData (contrato LLM)&lt;br&gt;ValidationReport (issues trazables)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="p1_domain">
+          <mxGeometry x="16" y="134" width="298" height="102" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_sports" value="&lt;b&gt;Puertos de servicio&lt;/b&gt;&lt;br&gt;DocumentStorage · OCRProvider&lt;br&gt;InvoiceExtractor · BusinessValidator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="p1_domain">
+          <mxGeometry x="16" y="252" width="298" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_rports" value="&lt;b&gt;Puertos de repositorio&lt;/b&gt;&lt;br&gt;Document · Supplier · Job · Invoice&lt;br&gt;(+ InvoiceQuery · Page · Stats)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="p1_domain">
+          <mxGeometry x="16" y="340" width="298" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_exc" value="&lt;b&gt;Excepciones de dominio&lt;/b&gt;&lt;br&gt;AppError(code, retryable)&lt;br&gt;una sola bandera gobierna los reintentos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="p1_domain">
+          <mxGeometry x="16" y="428" width="298" height="72" as="geometry" />
+        </mxCell>
+
+        <!-- ======================= INFRAESTRUCTURA ======================= -->
+        <mxCell id="p1_infra" value="INFRAESTRUCTURA  (adaptadores reemplazables)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;spacingTop=6;fontSize=14;fontStyle=1;fillColor=#f8cecc;strokeColor=#b85450;arcSize=6;" vertex="1" parent="p1_1">
+          <mxGeometry x="1050" y="100" width="410" height="620" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_container" value="&lt;b&gt;container.py — raiz de composicion&lt;/b&gt;&lt;br&gt;la UNICA pieza que conoce clases concretas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p1_infra">
+          <mxGeometry x="16" y="42" width="378" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_repos" value="&lt;b&gt;Repositorios SQLAlchemy + UoW&lt;/b&gt;&lt;br&gt;mappers entidad&lt;-&gt;ORM · IntegrityError = permanente" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p1_infra">
+          <mxGeometry x="16" y="114" width="378" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_celery" value="&lt;b&gt;Celery&lt;/b&gt; — cola &quot;invoices&quot;&lt;br&gt;dispatcher · task con reintentos backoff 30·2^n (max 3)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p1_infra">
+          <mxGeometry x="16" y="186" width="378" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_storage" value="&lt;b&gt;LocalStorage&lt;/b&gt; — blobs YYYY/MM · escritura atomica" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p1_infra">
+          <mxGeometry x="16" y="258" width="378" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_ocr" value="&lt;b&gt;LocalOCR&lt;/b&gt; — texto embebido (pypdf) si PDF digital&lt;br&gt;motores OCR: PaddleOCR-VL | PP-OCR | Tesseract (LOCAL_OCR_ENGINE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p1_infra">
+          <mxGeometry x="16" y="310" width="378" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_llm" value="&lt;b&gt;Extraccion hibrida&lt;/b&gt; — Reglas primero; si faltan campos:&lt;br&gt;LLM_EXECUTION=api -&gt; vision OpenAI-compatible (Gemini)&lt;br&gt;LLM_EXECUTION=local -&gt; fusion OCR + reglas (offline)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p1_infra">
+          <mxGeometry x="16" y="382" width="378" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_security" value="&lt;b&gt;security/middleware&lt;/b&gt; — SecurityHeaders · RateLimit token-bucket&lt;br&gt;validador SSRF de LLM_BASE_URL (bloquea redes privadas)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p1_infra">
+          <mxGeometry x="16" y="462" width="378" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_logging" value="&lt;b&gt;logging_setup&lt;/b&gt; — JSON estructurado (job_id, task_id...)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p1_infra">
+          <mxGeometry x="16" y="534" width="378" height="44" as="geometry" />
+        </mxCell>
+
+        <!-- ============ FLECHAS DE DEPENDENCIA (regla de oro) ============ -->
+        <mxCell id="p1_e_pa" value="invoca casos de uso" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5e5e5e;strokeWidth=2;fontSize=11;exitX=1;exitY=0.35;exitDx=0;exitDy=0;entryX=0;entryY=0.35;entryDx=0;entryDy=0;" edge="1" parent="p1_1" source="p1_pres" target="p1_app">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_e_ad" value="orquesta entidades y puertos" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5e5e5e;strokeWidth=2;fontSize=11;exitX=1;exitY=0.35;exitDx=0;exitDy=0;entryX=0;entryY=0.35;entryDx=0;entryDy=0;" edge="1" parent="p1_1" source="p1_app" target="p1_domain">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_e_ia" value="implementa puertos de aplicacion (UoW · Dispatcher)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5e5e5e;strokeWidth=2;fontSize=11;fontColor=#ae4132;exitX=0;exitY=0.85;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="p1_1" source="p1_infra" target="p1_app">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1020" y="627" />
+              <mxPoint x="670" y="627" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1_e_id" value="implementa puertos de dominio (repos · storage · OCR · LLM)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5e5e5e;strokeWidth=2;fontSize=11;fontColor=#ae4132;exitX=0;exitY=0.6;exitDx=0;exitDy=0;entryX=1;entryY=0.6;entryDx=0;entryDy=0;" edge="1" parent="p1_1" source="p1_infra" target="p1_domain">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1035" y="472" />
+              <mxPoint x="1035" y="500" />
+              <mxPoint x="1030" y="500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ======================= EXTERNOS ======================= -->
+        <mxCell id="p1_pg" value="&lt;b&gt;PostgreSQL 16&lt;/b&gt;&lt;br&gt;5 tablas · JSONB · unicidades" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="p1_1">
+          <mxGeometry x="40" y="776" width="300" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_redis" value="&lt;b&gt;Redis 7&lt;/b&gt;&lt;br&gt;broker + resultados Celery" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="p1_1">
+          <mxGeometry x="392" y="776" width="300" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_fs" value="&lt;b&gt;Disco local&lt;/b&gt;&lt;br&gt;data/uploads/YYYY/MM/" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="p1_1">
+          <mxGeometry x="744" y="776" width="300" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_openai" value="&lt;b&gt;API vision OpenAI-compatible&lt;/b&gt; (p.ej. Gemini)&lt;br&gt;cuando LLM_EXECUTION=api · base_url validada anti-SSRF" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="p1_1">
+          <mxGeometry x="1096" y="776" width="364" height="64" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p1_e_pg" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;endArrow=open;exitX=0.12;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p1_1" source="p1_infra" target="p1_pg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_e_redis" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;endArrow=open;exitX=0.37;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p1_1" source="p1_infra" target="p1_redis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_e_fs" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;endArrow=open;exitX=0.62;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p1_1" source="p1_infra" target="p1_fs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_e_openai" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;endArrow=open;exitX=0.87;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p1_1" source="p1_infra" target="p1_openai">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ======================= LEYENDA ======================= -->
+        <mxCell id="p1_leg_t" value="LEYENDA" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="p1_1">
+          <mxGeometry x="40" y="872" width="80" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_lg1" value="Presentacion" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="p1_1">
+          <mxGeometry x="120" y="874" width="130" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_lg2" value="Aplicacion" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="p1_1">
+          <mxGeometry x="264" y="874" width="120" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_lg3" value="Dominio (nucleo)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p1_1">
+          <mxGeometry x="398" y="874" width="140" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_lg4" value="Infraestructura" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="p1_1">
+          <mxGeometry x="552" y="874" width="130" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_lg5" value="Servicio externo" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="p1_1">
+          <mxGeometry x="696" y="874" width="130" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_lg_txt" value="Azul = lo mas estable del sistema. Verde/amarillo/rojo = adaptadores que se pueden cambiar sin tocar el dominio.&lt;br&gt;Flecha continua gruesa = dependencia en tiempo de compilacion · Linea discontinua = conexion a servicio externo en ejecucion." style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#4d4d4d;" vertex="1" parent="p1_1">
+          <mxGeometry x="844" y="866" width="616" height="42" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="pagina-flujo" name="2 · Flujo de una factura">
+    <mxGraphModel dx="1200" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1250" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="p2_0" />
+        <mxCell id="p2_1" parent="p2_0" />
+
+        <mxCell id="p2_title" value="Flujo de una factura — de la subida al dashboard" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="p2_1">
+          <mxGeometry x="40" y="16" width="1170" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ================= COLUMNA CENTRAL: PIPELINE ================= -->
+        <mxCell id="p2_s1" value="&lt;b&gt;1 · Cliente sube la factura&lt;/b&gt;&lt;br&gt;curl o interfaz Streamlit (PDF · PNG · JPG)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="70" width="380" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s2" value="&lt;b&gt;2 · POST /api/v1/invoices/upload&lt;/b&gt; (multipart)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="138" width="380" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s3" value="&lt;b&gt;3 · UploadInvoiceUseCase valida&lt;/b&gt;&lt;br&gt;tamaño ≤ MAX_FILE_SIZE_MB · extension + magic bytes coherentes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="198" width="380" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s4" value="&lt;b&gt;4 · Guarda el blob&lt;/b&gt;&lt;br&gt;data/uploads/YYYY/MM/&lt;uuid&gt;__fichero (escritura atomica)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="270" width="380" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s5" value="&lt;b&gt;5 · INSERT document + job PENDING&lt;/b&gt;&lt;br&gt;una sola transaccion (Unit of Work)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="338" width="380" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s6" value="&lt;b&gt;6 · Encola tarea &quot;process_invoice&quot; en Redis&lt;/b&gt;&lt;br&gt;solo DESPUES de confirmar en BD (nunca trabajos fantasma)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="406" width="380" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s7" value="&lt;b&gt;7 · Worker Celery toma la tarea&lt;/b&gt;&lt;br&gt;job → PROCESSING (attempts += 1) · guarda celery_task_id" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="474" width="380" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s8" value="&lt;b&gt;8 · Extrae el texto&lt;/b&gt;&lt;br&gt;texto embebido (pypdf) si PDF digital · si no, OCR local:&lt;br&gt;PaddleOCR-VL / PP-OCR / Tesseract (LOCAL_OCR_ENGINE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="542" width="380" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s9" value="&lt;b&gt;9 · Extraccion hibrida&lt;/b&gt;&lt;br&gt;Reglas primero (gratis/auditable) · si faltan campos, escalada&lt;br&gt;segun LLM_EXECUTION: api = vision Gemini | local = fusion OCR+reglas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="622" width="380" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s10" value="&lt;b&gt;10 · Construye el agregado Invoice&lt;/b&gt;&lt;br&gt;lineas ANTES del constructor (exige ≥ 1 item · total &gt; 0)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="702" width="380" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s11" value="&lt;b&gt;11 · Valida reglas de negocio&lt;/b&gt;&lt;br&gt;subtotal + IVA = total · fechas · rangos  →  VALID / INVALID" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="770" width="380" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s12" value="&lt;b&gt;12 · Persiste en UNA transaccion&lt;/b&gt;&lt;br&gt;supplier deduplicado por tax_id · invoice + items + reporte" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="838" width="380" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s13" value="&lt;b&gt;13 · job → COMPLETED&lt;/b&gt; (enlaza invoice_id)&lt;br&gt;la API responde 202 desde el paso 2 — el resto es asincrono" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="430" y="906" width="380" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- flechas espina dorsal -->
+        <mxCell id="p2_a1" style="endArrow=block;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p2_1" source="p2_s1" target="p2_s2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_a2" style="endArrow=block;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p2_1" source="p2_s2" target="p2_s3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_a3" style="endArrow=block;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p2_1" source="p2_s3" target="p2_s4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_a4" style="endArrow=block;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p2_1" source="p2_s4" target="p2_s5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_a5" style="endArrow=block;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p2_1" source="p2_s5" target="p2_s6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_a6" style="endArrow=block;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p2_1" source="p2_s6" target="p2_s7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_a7" style="endArrow=block;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p2_1" source="p2_s7" target="p2_s8"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_a8" style="endArrow=block;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p2_1" source="p2_s8" target="p2_s9"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_a9" style="endArrow=block;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p2_1" source="p2_s9" target="p2_s10"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_a10" style="endArrow=block;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p2_1" source="p2_s10" target="p2_s11"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_a11" style="endArrow=block;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p2_1" source="p2_s11" target="p2_s12"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_a12" style="endArrow=block;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="p2_1" source="p2_s12" target="p2_s13"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ================= LATERAL IZQUIERDO: POSTGRES ================= -->
+        <mxCell id="p2_pg" value="&lt;b&gt;PostgreSQL 16&lt;/b&gt;&lt;br&gt;&lt;br&gt;documents · processing_jobs&lt;br&gt;suppliers · invoices&lt;br&gt;invoice_items" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=14;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;dashed=1;" vertex="1" parent="p2_1">
+          <mxGeometry x="90" y="338" width="230" height="330" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_pg1" value="commit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;endArrow=open;fontSize=10;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="p2_1" source="p2_s5" target="p2_pg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_pg2" value="commit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;endArrow=open;fontSize=10;exitX=0;exitY=0.5;entryX=1;entryY=0.72;" edge="1" parent="p2_1" source="p2_s12" target="p2_pg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_pg3" value="update estado" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;endArrow=open;fontSize=10;exitX=0;exitY=0.5;entryX=1;entryY=0.9;" edge="1" parent="p2_1" source="p2_s13" target="p2_pg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ================= LATERAL DERECHO: REDIS / ERRORES / UI ================= -->
+        <mxCell id="p2_redis" value="&lt;b&gt;Redis 7&lt;/b&gt;&lt;br&gt;cola &quot;invoices&quot; + resultados" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="880" y="398" width="300" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r1" value="enqueue" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#b85450;fontSize=10;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="p2_1" source="p2_s6" target="p2_redis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r2" value="consume (acks_late: redelivery si el worker muere)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#b85450;fontSize=10;exitX=0.5;exitY=1;entryX=1;entryY=0.2;" edge="1" parent="p2_1" source="p2_redis" target="p2_s7">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1030" y="484" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="p2_fail" value="&lt;b&gt;Si algo falla&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;Transitorio (timeout / red):&lt;br&gt;job queda PROCESSING → reintento&lt;br&gt;backoff 30·2^n · maximo 3&lt;br&gt;&lt;br&gt;Permanente (fichero corrupto,&lt;br&gt;duplicado en BD):&lt;br&gt;job FAILED + documento marcado" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=6;" vertex="1" parent="p2_1">
+          <mxGeometry x="880" y="560" width="300" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_f1" value="AppError.retryable decide" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#d79b00;endArrow=open;fontSize=10;exitX=1;exitY=0.75;entryX=0;entryY=0.5;" edge="1" parent="p2_1" source="p2_s7" target="p2_fail">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p2_ui" value="&lt;b&gt;Consultas (polling)&lt;/b&gt;&lt;br&gt;GET /jobs/{id} · GET /invoices&lt;br&gt;GET /dashboard/stats · Streamlit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="p2_1">
+          <mxGeometry x="880" y="860" width="300" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_u1" value="estado visible al instante" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;fontSize=10;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="p2_1" source="p2_s13" target="p2_ui">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_u2" value="lee" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;endArrow=open;fontSize=10;exitX=0.5;exitY=0;entryX=1;entryY=0.5;" edge="1" parent="p2_1" source="p2_ui" target="p2_pg">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1030" y="503" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ================= GARANTIA FINAL ================= -->
+        <mxCell id="p2_guarantee" value="Garantia clave: EXACTAMENTE UNA factura por documento — guardia de idempotencia al entrar al pipeline + unicidad (supplier_id, number) en BD + resume automatico si hubo un crash entre commits." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="p2_1">
+          <mxGeometry x="90" y="980" width="1090" height="52" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pagina-extraccion" name="3 · Extraccion hibrida y seguridad">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="p3_0" />
+        <mxCell id="p3_1" parent="p3_0" />
+
+        <mxCell id="p3_title" value="Extraccion hibrida (LLM_EXECUTION) y pila de seguridad HTTP" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="p3_1">
+          <mxGeometry x="40" y="16" width="1320" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ============ FLUJO HIBRIDO ============ -->
+        <mxCell id="p3_h_in" value="&lt;b&gt;Pipeline del worker&lt;/b&gt;&lt;br&gt;lineas OCR + paginas renderizadas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="p3_1">
+          <mxGeometry x="60" y="90" width="300" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_h_rules" value="&lt;b&gt;RulesExtractor (reglas/regex)&lt;/b&gt;&lt;br&gt;gratis · determinista · auditable&lt;br&gt;NIT, fechas, SUBTOTAL/IVA/TOTAL, items" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="p3_1">
+          <mxGeometry x="440" y="82" width="330" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_h_dec" value="&lt;b&gt;¿Campos requeridos completos?&lt;/b&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="p3_1">
+          <mxGeometry x="850" y="62" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_h_api" value="&lt;b&gt;LLM_EXECUTION = api&lt;/b&gt;&lt;br&gt;OpenAICompatibleExtractor&lt;br&gt;vision multimodal (Gemini / OpenAI-compat)&lt;br&gt;base_url validada anti-SSRF" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p3_1">
+          <mxGeometry x="1150" y="40" width="210" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_h_local" value="&lt;b&gt;LLM_EXECUTION = local&lt;/b&gt;&lt;br&gt;LocalOCRInvoiceExtractor&lt;br&gt;fusion: texto original + OCR de paginas&lt;br&gt;re-aplica reglas sobre texto enriquecido&lt;br&gt;(100% offline · sin coste por llamada)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p3_1">
+          <mxGeometry x="1150" y="150" width="210" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_h_fuse" value="&lt;b&gt;HybridInvoiceExtractor — fusion&lt;/b&gt;&lt;br&gt;partial_data (reglas) + resultado del fallback&lt;br&gt;el trio subtotal/tax/total viaja como bloque coherente" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="p3_1">
+          <mxGeometry x="700" y="300" width="420" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_h_out" value="&lt;b&gt;ExtractedInvoice&lt;/b&gt; → agregado Invoice → validacion de negocio" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="p3_1">
+          <mxGeometry x="760" y="430" width="300" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p3_e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1.5;strokeColor=#4d4d4d;" edge="1" parent="p3_1" source="p3_h_in" target="p3_h_rules"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1.5;strokeColor=#4d4d4d;" edge="1" parent="p3_1" source="p3_h_rules" target="p3_h_dec"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_e3" value="si" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1.5;strokeColor=#4d4d4d;fontSize=11;" edge="1" parent="p3_1" source="p3_h_dec" target="p3_h_out">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="960" y="455" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3_e4" value="faltan campos (PartialExtractionError)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1.5;strokeColor=#ae4132;fontSize=11;" edge="1" parent="p3_1" source="p3_h_dec" target="p3_h_api"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1.5;strokeColor=#ae4132;" edge="1" parent="p3_1" source="p3_h_dec" target="p3_h_local"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;endArrow=open;" edge="1" parent="p3_1" source="p3_h_api" target="p3_h_fuse"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_e7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;endArrow=open;" edge="1" parent="p3_1" source="p3_h_local" target="p3_h_fuse"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_e8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1.5;strokeColor=#4d4d4d;" edge="1" parent="p3_1" source="p3_h_fuse" target="p3_h_out"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_e9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;endArrow=open;fontSize=10;" edge="1" parent="p3_1" source="p3_h_in" target="p3_h_local"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ============ MOTORES OCR ============ -->
+        <mxCell id="p3_ocr_box" value="&lt;b&gt;Motores OCR (LOCAL_OCR_ENGINE)&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;vl — PaddleOCR-VL (vision-lenguaje, escaneos dificiles)&lt;br&gt;paddle — PP-OCR clasico · tesseract — fallback ligero&lt;br&gt;PDF digital → texto embebido (pypdf), sin OCR" style="rounded=1;whiteSpace=wrap;html=1;align=left;spacingLeft=10;verticalAlign=top;spacingTop=6;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="p3_1">
+          <mxGeometry x="60" y="200" width="300" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ============ PILA DE SEGURIDAD ============ -->
+        <mxCell id="p3_sec" value="&lt;b&gt;Pila de seguridad FastAPI (orden exterior → interior)&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;1 · SecurityHeadersMiddleware — HSTS · X-Frame-Options DENY · nosniff · CSP · Referrer-Policy&lt;br&gt;2 · RateLimitMiddleware — token-bucket 60 req/min · burst 10 · por IP (X-Forwarded-For) · 429 + Retry-After · exento /health&lt;br&gt;3 · CORSMiddleware — origenes desde CORS_ORIGINS (&quot;*&quot; solo desarrollo)&lt;br&gt;&lt;br&gt;&lt;b&gt;Anti-SSRF en settings:&lt;/b&gt; LLM_BASE_URL rechaza redes privadas (10/8 · 172.16/12 · 192.168/16), loopback, link-local,&lt;br&gt;localhost, host.docker.internal y esquemas no http(s) — falla rapido al arrancar" style="rounded=1;whiteSpace=wrap;html=1;align=left;spacingLeft=10;verticalAlign=top;spacingTop=6;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="p3_1">
+          <mxGeometry x="60" y="360" width="560" height="170" as="geometry" />
+        </mxCell>
+
+        <!-- ============ NOTA DE DECISION ============ -->
+        <mxCell id="p3_note" value="Decision #13 (manual_tecnico): el modo local sustituyo al pipeline Qwen/Ollama retirado.&lt;br&gt;Ambos modos validados E2E 4/4 documentos COMPLETED: api ~5s/doc · local ~4-5 min/doc (PaddleOCR-VL)." style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;fontSize=11;fontColor=#4d4d4d;" vertex="1" parent="p3_1">
+          <mxGeometry x="660" y="540" width="700" height="54" as="geometry" />
+        </mxCell>
+
+        <!-- ============ LEYENDA ============ -->
+        <mxCell id="p3_leg" value="Verde = entrada pipeline · Amarillo = reglas deterministicas · Rojo = escaladas configurables · Azul = contrato/fusion · Naranja = seguridad · Gris punteado = externo" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontColor=#4d4d4d;" vertex="1" parent="p3_1">
+          <mxGeometry x="60" y="930" width="1300" height="26" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
